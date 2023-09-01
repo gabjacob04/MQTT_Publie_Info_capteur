@@ -30,7 +30,7 @@ client.connect(MQTT_BROKER, 1883, 60)
 try:
     while True:
         # Lecture des données du capteur DHT11
-        result = instance.read()
+        result = instance.read() # lis la température de la pin
 
         if result.is_valid():
             temperature = result.temperature
