@@ -1,16 +1,50 @@
-# This is a sample Python script.
+import RPi.GPIO as GPIO
+import dht11
+import paho.mqtt.client as mqtt
+import time
 
-# Press Maj+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+# Configuration des broches GPIO
+DHT_PIN = 17
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+
+# Initialisation du capteur DHT11
+instance = dht11.DHT11(pin=DHT_PIN)
+
+# Configuration du client MQTT
+MQTT_BROKER = "10.4.1.42"
+MQTT_TOPIC = "jacob/temperature/sensor"  # Sujet spécifique pour la température
+client = mqtt.Client()
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("Connexion MQTT établie avec succès.")
+    else:
+        print("Échec de la connexion MQTT, code de retour : " + str(rc))
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+client.on_connect = on_connect
+client.connect(MQTT_BROKER, 1883, 60)
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+try:
+    while True:
+        # Lecture des données du capteur DHT11
+        result = instance.read()
+
+        if result.is_valid():
+            temperature = result.temperature
+
+            # Publication de la température sur MQTT avec une QoS de 0
+            client.publish(MQTT_TOPIC, str(temperature), qos=0)
+            print("Température publiée sur MQTT : " + str(temperature))
+        else:
+            print("test")
+        # Pause entre les lectures
+        client.loop()
+        time.sleep(5)  # Vous pouvez ajuster la fréquence des lectures ici
+
+except KeyboardInterrupt:
+    GPIO.cleanup()
+    client.disconnect()
+    print("Arrêt du programme.")
